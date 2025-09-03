@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circadian Tracker</title>
+    <meta name="description" content="Трекер циркадных ритмов. Настрой свои привычки под природные ритмы.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="assets/favicon.ico">
+    <!-- Иконки для PWA -->
+    <link rel="apple-touch-icon" href="assets/icons/icon-152x152.png">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1>Циркадный Трекер</h1>
+            <p class="subtitle">Синхронизируйся с природными ритмами</p>
+        </header>
+
+        <main class="main">
+            <section class="user-info">
+                <h2>Привет, <span id="user-name">Друг</span>!</h2>
+                <p>Твой хронотип: <strong id="user-chronotype">Голубь</strong></p>
+                <div class="sync-score">
+                    <div class="score-ring">
+                        <svg width="100" height="100" viewBox="0 0 100 100">
+                            <circle class="score-ring-bg" cx="50" cy="50" r="45" />
+                            <circle class="score-ring-progress" cx="50" cy="50" r="45" 
+                                    stroke-dasharray="283" stroke-dashoffset="283" />
+                        </svg>
+                        <span id="sync-percent">0%</span>
+                    </div>
+                    <p>Синхронизация</p>
+                </div>
+            </section>
+
+            <section class="anchors">
+                <h2>Ключевые привычки сегодня</h2>
+                <div class="anchor-cards">
+                    <!-- Карточки привычек будут сгенерированы через JS -->
+                </div>
+            </section>
+
+            <section class="progress">
+                <h2>Твоя статистика</h2>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-value" id="streak-days">0</span>
+                        <span class="stat-label">дней подряд</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="completed-anchors">0</span>
+                        <span class="stat-label">привычек сегодня</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <button id="settings-btn">Настройки</button>
+        </footer>
+    </div>
+
+    <!-- Модальное окно настроек -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Настройки профиля</h2>
+            <form id="user-form">
+                <label for="name">Ваше имя:</label>
+                <input type="text" id="name" name="name" required>
+
+                <label for="wake-up-time">Во сколько вы просыпаетесь?</label>
+                <input type="time" id="wake-up-time" name="wakeUpTime" required>
+
+                <label for="chronotype">Ваш хронотип:</label>
+                <select id="chronotype" name="chronotype">
+                    <option value="lark">Жаворонок</option>
+                    <option value="dove" selected>Голубь</option>
+                    <option value="owl">Сова</option>
+                </select>
+
+                <button type="submit">Сохранить</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
