@@ -1,5 +1,5 @@
-// Основные привычки (якоря)
-const anchorsConfig = [
+// Основные привычки (якоря) - ТЕПЕРЬ ГЛОБАЛЬНАЯ КОНСТАНТА
+const ANCHORS_CONFIG = [
     {
         id: 'morning-light',
         title: 'Утренний свет',
@@ -66,54 +66,83 @@ let userState = {
     bedtime: '23:00',
     streak: 0,
     lastActiveDate: null,
-    syncScore: 0
+    syncScore: 0,
+    anchors: JSON.parse(JSON.stringify(ANCHORS_CONFIG)) // Копируем конфиг
 };
 
 // Инициализация приложения
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Приложение загружается...');
     loadUserData();
     renderAnchors();
     updateUI();
     setupEventListeners();
     checkDayStreak();
-    scheduleNotifications();
+    
+    // Показываем главный интерфейс
+    document.querySelector('.main').style.display = 'block';
+    console.log('Интерфейс отображен');
 });
 
 // Загрузка данных пользователя из localStorage
 function loadUserData() {
     const savedData = localStorage.getItem('circadianUserData');
     if (savedData) {
-        userState = {...userState, ...JSON.parse(savedData)};
+        try {
+            const parsedData = JSON.parse(savedData);
+            userState = {...userState, ...parsedData};
+            console.log('Данные загружены:', userState);
+        } catch (e) {
+            console.error('Ошибка загрузки данных:', e);
+            localStorage.removeItem('circadianUserData');
+        }
     }
     updateUserInfo();
 }
 
 // Сохранение данных пользователя
 function saveUserData() {
-    localStorage.setItem('circadianUserData', JSON.stringify(userState));
+    try {
+        localStorage.setItem('circadianUserData', JSON.stringify(userState));
+        console.log('Данные сохранены');
+    } catch (e) {
+        console.error('Ошибка сохранения:', e);
+    }
 }
 
 // Обновление информации о пользователе в UI
 function updateUserInfo() {
-    document.getElementById('user-name').textContent = userState.name;
+    const userNameElement = document.getElementById('user-name');
+    const chronotypeElement = document.getElementById('user-chronotype');
+    const streakElement = document.getElementById('streak-days');
     
-    const chronotypeNames = {
-        'lark': 'Жаворонок',
-        'dove': 'Голубь',
-        'owl': 'Сова'
-    };
-    document.getElementById('user-chronotype').textContent = chronotypeNames[userState.chronotype];
+    if (userNameElement) userNameElement.textContent = userState.name;
     
-    document.getElementById('streak-days').textContent = userState.streak;
+    if (chronotypeElement) {
+        const chronotypeNames = {
+            'lark': 'Жаворонок',
+            'dove': 'Голубь',
+            'owl': 'Сова'
+        };
+        chronotypeElement.textContent = chronotypeNames[userState.chronotype] || 'Голубь';
+    }
+    
+    if (streakElement) streakElement.textContent = userState.streak;
+    
     updateSyncScore();
 }
 
 // Рендер карточек привычек
 function renderAnchors() {
     const container = document.querySelector('.anchor-cards');
+    if (!container) {
+        console.error('Контейнер для привычек не найден!');
+        return;
+    }
+    
     container.innerHTML = '';
 
-    anchorsConfig.forEach(anchor => {
+    userState.anchors.forEach(anchor => {
         let habitTime = calculateHabitTime(anchor.id, userState.wakeUpTime, userState.bedtime);
         
         const card = document.createElement('div');
@@ -136,6 +165,8 @@ function renderAnchors() {
             toggleAnchorCompletion(anchorId);
         });
     });
+    
+    console.log('Привычки отображены:', userState.anchors.length);
 }
 
 // Вычисление времени для привычки
@@ -176,11 +207,11 @@ function getAnchorStatus(anchorId, habitTime) {
     const timeDiff = now.getHours() * 60 + now.getMinutes() - 
                     (habitDateTime.getHours() * 60 + habitDateTime.getMinutes());
     
-    const anchor = anchorsConfig.find(a => a.id === anchorId);
+    const anchor = userState.anchors.find(a => a.id === anchorId);
     
     if (anchor && anchor.completed) {
         return 'completed';
-    } else if (timeDiff > 120) { // Если прошло более 2 часов после времени привычки
+    } else if (timeDiff > 120) {
         return 'missed';
     } else {
         return 'pending';
@@ -189,14 +220,13 @@ function getAnchorStatus(anchorId, habitTime) {
 
 // Переключение выполнения привычки
 function toggleAnchorCompletion(anchorId) {
-    const anchor = anchorsConfig.find(a => a.id === anchorId);
-    if (anchor) {
-        anchor.completed = !anchor.completed;
+    const anchorIndex = userState.anchors.findIndex(a => a.id === anchorId);
+    if (anchorIndex !== -1) {
+        userState.anchors[anchorIndex].completed = !userState.anchors[anchorIndex].completed;
         saveUserData();
         updateUI();
         
-        // Показываем мотивационное сообщение
-        showMotivationMessage(anchorId, anchor.completed);
+        showMotivationMessage(anchorId, userState.anchors[anchorIndex].completed);
     }
 }
 
@@ -204,33 +234,33 @@ function toggleAnchorCompletion(anchorId) {
 function showMotivationMessage(anchorId, completed) {
     const messages = {
         'morning-light': completed ? 
-            'Отлично! Солнечный свет запустил ваши циркадные ритмы!' : 
-            'Не забывайте про утренний свет для синхронизации ритмов',
+            'Отлично! Солнечный свет запустил ваши циркадные ритмы!' : '',
         'hydration': completed ?
-            'Вода запускает метаболизм и помогает проснуться!' :
-            'Утренняя гидратация важна для детоксикации',
+            'Вода запускает метаболизм и помогает проснуться!' : '',
         'movement': completed ?
-            'Активность улучшила вашу чувствительность к инсулину!' :
-            'Движение помогает синхронизировать периферические часы',
+            'Активность улучшила вашу чувствительность к инсулину!' : '',
         'digital-sunset': completed ?
-            'Отлично! Мелатонин сможет выработаться без помех!' :
-            'Синий свет вечером подавляет выработку мелатонина'
+            'Отлично! Мелатонин сможет выработаться без помех!' : ''
     };
     
-    if (messages[anchorId]) {
+    if (messages[anchorId] && completed) {
         alert(messages[anchorId]);
     }
 }
 
 // Обновление UI
 function updateUI() {
-    const completedCount = anchorsConfig.filter(a => a.completed).length;
-    document.getElementById('completed-anchors').textContent = completedCount;
+    const completedCount = userState.anchors.filter(a => a.completed).length;
+    const completedElement = document.getElementById('completed-anchors');
+    
+    if (completedElement) {
+        completedElement.textContent = completedCount;
+    }
     
     // Обновляем внешний вид чекбоксов
     document.querySelectorAll('.anchor-checkbox').forEach(checkbox => {
         const anchorId = checkbox.getAttribute('data-id');
-        const anchor = anchorsConfig.find(a => a.id === anchorId);
+        const anchor = userState.anchors.find(a => a.id === anchorId);
         if (anchor && anchor.completed) {
             checkbox.classList.add('checked');
         } else {
@@ -243,27 +273,33 @@ function updateUI() {
 
 // Обновление процента синхронизации
 function updateSyncScore() {
-    const totalAnchors = anchorsConfig.length;
-    const completedAnchors = anchorsConfig.filter(a => a.completed).length;
+    const totalAnchors = userState.anchors.length;
+    const completedAnchors = userState.anchors.filter(a => a.completed).length;
     const score = totalAnchors > 0 ? Math.round((completedAnchors / totalAnchors) * 100) : 0;
     
     userState.syncScore = score;
-    document.getElementById('sync-percent').textContent = `${score}%`;
+    
+    const syncPercentElement = document.getElementById('sync-percent');
+    if (syncPercentElement) {
+        syncPercentElement.textContent = `${score}%`;
+    }
     
     // Анимация кругового прогресса
     const progressCircle = document.querySelector('.score-ring-progress');
-    const circumference = 2 * Math.PI * 45;
-    const offset = circumference - (score / 100) * circumference;
-    progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
-    progressCircle.style.strokeDashoffset = offset;
-    
-    // Меняем цвет в зависимости от процента
-    if (score >= 80) {
-        progressCircle.style.stroke = '#48bb78'; // зеленый
-    } else if (score >= 50) {
-        progressCircle.style.stroke = '#ed8936'; // оранжевый
-    } else {
-        progressCircle.style.stroke = '#e53e3e'; // красный
+    if (progressCircle) {
+        const circumference = 2 * Math.PI * 45;
+        const offset = circumference - (score / 100) * circumference;
+        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressCircle.style.strokeDashoffset = offset;
+        
+        // Меняем цвет в зависимости от процента
+        if (score >= 80) {
+            progressCircle.style.stroke = '#48bb78';
+        } else if (score >= 50) {
+            progressCircle.style.stroke = '#ed8936';
+        } else {
+            progressCircle.style.stroke = '#e53e3e';
+        }
     }
     
     saveUserData();
@@ -292,91 +328,66 @@ function checkDayStreak() {
     updateUserInfo();
 }
 
-// Настройка уведомлений
-function scheduleNotifications() {
-    if ('Notification' in window && Notification.permission === 'granted') {
-        anchorsConfig.forEach(anchor => {
-            const habitTime = calculateHabitTime(anchor.id, userState.wakeUpTime, userState.bedtime);
-            const [hours, minutes] = habitTime.split(':').map(Number);
-            
-            const now = new Date();
-            const notificationTime = new Date();
-            notificationTime.setHours(hours, minutes, 0);
-            
-            if (notificationTime > now) {
-                const timeout = notificationTime - now;
-                setTimeout(() => {
-                    new Notification('Circadian Tracker', {
-                        body: `Время для: ${anchor.title} - ${anchor.description}`,
-                        icon: '/assets/icons/icon-192x192.png'
-                    });
-                }, timeout);
-            }
-        });
-    }
-}
-
-// Запрос разрешения на уведомления
-function requestNotificationPermission() {
-    if ('Notification' in window) {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                scheduleNotifications();
-            }
-        });
-    }
-}
-
 // Настройка обработчиков событий
 function setupEventListeners() {
+    console.log('Настройка обработчиков...');
+    
     // Модальное окно настроек
     const modal = document.getElementById('settings-modal');
     const settingsBtn = document.getElementById('settings-btn');
     const closeBtn = document.querySelector('.close');
     const userForm = document.getElementById('user-form');
 
-    settingsBtn.addEventListener('click', () => {
-        modal.style.display = 'block';
-        // Заполняем форму текущими значениями
-        document.getElementById('name').value = userState.name;
-        document.getElementById('wake-up-time').value = userState.wakeUpTime;
-        document.getElementById('bedtime').value = userState.bedtime;
-        document.getElementById('chronotype').value = userState.chronotype;
-    });
-
-    closeBtn.addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
-
-    window.addEventListener('click', (event) => {
-        if (event.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-
-    userForm.addEventListener('submit', (event) => {
-        event.preventDefault();
-        
-        userState.name = document.getElementById('name').value;
-        userState.wakeUpTime = document.getElementById('wake-up-time').value;
-        userState.bedtime = document.getElementById('bedtime').value;
-        userState.chronotype = document.getElementById('chronotype').value;
-        
-        saveUserData();
-        updateUserInfo();
-        renderAnchors();
-        scheduleNotifications();
-        
-        modal.style.display = 'none';
-    });
-
-    // Запрос разрешения на уведомления при первом использовании
-    if (!localStorage.getItem('notificationRequested')) {
-        setTimeout(() => {
-            requestNotificationPermission();
-            localStorage.setItem('notificationRequested', 'true');
-        }, 3000);
+    if (settingsBtn && modal) {
+        settingsBtn.addEventListener('click', () => {
+            modal.style.display = 'block';
+            // Заполняем форму текущими значениями
+            document.getElementById('name').value = userState.name;
+            document.getElementById('wake-up-time').value = userState.wakeUpTime;
+            document.getElementById('bedtime').value = userState.bedtime;
+            document.getElementById('chronotype').value = userState.chronotype;
+        });
     }
+
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    if (modal) {
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+
+    if (userForm) {
+        userForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            
+            userState.name = document.getElementById('name').value;
+            userState.wakeUpTime = document.getElementById('wake-up-time').value;
+            userState.bedtime = document.getElementById('bedtime').value;
+            userState.chronotype = document.getElementById('chronotype').value;
+            
+            // Обновляем время привычек при изменении настроек
+            userState.anchors.forEach(anchor => {
+                anchor.time = calculateHabitTime(anchor.id, userState.wakeUpTime, userState.bedtime);
+            });
+            
+            saveUserData();
+            updateUserInfo();
+            renderAnchors();
+            
+            modal.style.display = 'none';
+            
+            alert('Настройки сохранены! Привычки обновлены под ваш график.');
+        });
+    }
+    
+    console.log('Обработчики настроены');
 }
 
 // Простая реализация Service Worker для PWA
@@ -387,8 +398,3 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.log('Ошибка регистрации Service Worker:', err));
     });
 }
-
-// Автоматическое обновление статуса привычек каждый час
-setInterval(() => {
-    renderAnchors();
-}, 60 * 60 * 1000);
