@@ -1,264 +1,44 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #333;
-    min-height: 100vh;
-}
-
-.app {
-    max-width: 400px;
-    margin: 0 auto;
-    padding: 20px;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-.header {
-    text-align: center;
-    margin-bottom: 30px;
-    color: white;
-}
-
-.header h1 {
-    font-size: 2rem;
-    margin-bottom: 5px;
-}
-
-.subtitle {
-    opacity: 0.8;
-}
-
-.main {
-    flex: 1;
-    background: white;
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
-
-.user-info {
-    text-align: center;
-    margin-bottom: 25px;
-}
-
-.user-info h2 {
-    margin-bottom: 10px;
-    color: #4a5568;
-}
-
-.sync-score {
-    margin-top: 20px;
-}
-
-.score-ring {
-    position: relative;
-    width: 100px;
-    height: 100px;
-    margin: 0 auto;
-}
-
-.score-ring svg {
-    transform: rotate(-90deg);
-}
-
-.score-ring-bg {
-    fill: none;
-    stroke: #e2e8f0;
-    stroke-width: 8;
-}
-
-.score-ring-progress {
-    fill: none;
-    stroke: #48bb78;
-    stroke-width: 8;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 0.5s ease;
-}
-
-.score-ring span {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #2d3748;
-}
-
-.anchors {
-    margin-bottom: 25px;
-}
-
-.anchors h2 {
-    margin-bottom: 15px;
-    color: #4a5568;
-    font-size: 1.2rem;
-}
-
-.anchor-card {
-    background: #f7fafc;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    border-left: 4px solid #48bb78;
+/* Добавить в конец файла */
+.anchor-card.completed {
+    background: #f0fff4;
+    border-left-color: #48bb78;
 }
 
 .anchor-card.missed {
+    background: #fff5f5;
     border-left-color: #e53e3e;
 }
 
 .anchor-card.pending {
+    background: #fffaf0;
     border-left-color: #ed8936;
 }
 
-.anchor-icon {
-    font-size: 1.5rem;
-    margin-right: 15px;
-}
-
-.anchor-content {
-    flex: 1;
-}
-
-.anchor-title {
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.anchor-time {
-    font-size: 0.9rem;
-    color: #718096;
-}
-
+/* Анимация для чекбоксов */
 .anchor-checkbox {
-    width: 24px;
-    height: 24px;
-    border: 2px solid #cbd5e0;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    transition: all 0.3s ease;
 }
 
 .anchor-checkbox.checked {
-    background: #48bb78;
-    border-color: #48bb78;
-    color: white;
+    transform: scale(1.1);
 }
 
-.progress h2 {
-    margin-bottom: 15px;
-    color: #4a3748;
-    font-size: 1.2rem;
+/* Адаптивность для большего количества карточек */
+.anchor-cards {
+    max-height: 60vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
 }
 
-.stats {
-    display: flex;
-    justify-content: space-around;
+.anchor-cards::-webkit-scrollbar {
+    width: 4px;
 }
 
-.stat {
-    text-align: center;
+.anchor-cards::-webkit-scrollbar-track {
+    background: #f1f1f1;
 }
 
-.stat-value {
-    display: block;
-    font-size: 2rem;
-    font-weight: bold;
-    color: #667eea;
-}
-
-.stat-label {
-    font-size: 0.9rem;
-    color: #718096;
-}
-
-.footer {
-    margin-top: 20px;
-    text-align: center;
-}
-
-#settings-btn {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 25px;
-    cursor: pointer;
-    backdrop-filter: blur(10px);
-}
-
-/* Модальное окно */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 100;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-    background-color: white;
-    margin: 10% auto;
-    padding: 20px;
-    border-radius: 15px;
-    width: 90%;
-    max-width: 400px;
-    position: relative;
-}
-
-.close {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-#user-form label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-#user-form input,
-#user-form select {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-}
-
-#user-form button {
-    background: #667eea;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 5px;
-    width: 100%;
-    cursor: pointer;
-}
-
-@media (max-width: 480px) {
-    .app {
-        padding: 15px;
-    }
-    
-    .header h1 {
-        font-size: 1.5rem;
-    }
+.anchor-cards::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 2px;
 }
