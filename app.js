@@ -5,7 +5,7 @@ const anchorsConfig = [
         title: 'Утренний свет',
         description: '10-15 минут на улице в течение часа после пробуждения',
         icon: '☀️',
-        time: '07:00', // Будет вычисляться на основе времени пробуждения
+        time: '07:00',
         completed: false
     },
     {
@@ -14,6 +14,38 @@ const anchorsConfig = [
         description: 'Завтрак в течение часа после пробуждения',
         icon: '🍽️',
         time: '08:00',
+        completed: false
+    },
+    {
+        id: 'hydration',
+        title: 'Утренняя гидратация',
+        description: 'Стакан воды после пробуждения',
+        icon: '💧',
+        time: '07:10',
+        completed: false
+    },
+    {
+        id: 'daylight-exposure',
+        title: 'Свет дня',
+        description: 'Не менее 1 часа при естественном освещении',
+        icon: '🔆',
+        time: '12:00',
+        completed: false
+    },
+    {
+        id: 'movement',
+        title: 'Дневная активность',
+        description: '30 минут физической активности',
+        icon: '🚶‍♂️',
+        time: '15:00',
+        completed: false
+    },
+    {
+        id: 'digital-sunset',
+        title: 'Цифровой закат',
+        description: 'Отключение экранов за 1 час до сна',
+        icon: '📵',
+        time: '21:00',
         completed: false
     },
     {
@@ -31,6 +63,7 @@ let userState = {
     name: 'Друг',
     chronotype: 'dove',
     wakeUpTime: '07:00',
+    bedtime: '23:00',
     streak: 0,
     lastActiveDate: null,
     syncScore: 0
@@ -43,6 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateUI();
     setupEventListeners();
     checkDayStreak();
+    scheduleNotifications();
 });
 
 // Загрузка данных пользователя из localStorage
@@ -80,8 +114,7 @@ function renderAnchors() {
     container.innerHTML = '';
 
     anchorsConfig.forEach(anchor => {
-        // Вычисляем время для привычки на основе времени пробуждения
-        let habitTime = calculateHabitTime(anchor.id, userState.wakeUpTime);
+        let habitTime = calculateHabitTime(anchor.id, userState.wakeUpTime, userState.bedtime);
         
         const card = document.createElement('div');
         card.className = `anchor-card ${getAnchorStatus(anchor.id, habitTime)}`;
@@ -91,7 +124,7 @@ function renderAnchors() {
                 <div class="anchor-title">${anchor.title}</div>
                 <div class="anchor-time">${habitTime} • ${anchor.description}</div>
             </div>
-            <div class="anchor-checkbox" data-id="${anchor.id}">✓</div>
+            <div class="anchor-checkbox ${anchor.completed ? 'checked' : ''}" data-id="${anchor.id}">✓</div>
         `;
         container.appendChild(card);
     });
@@ -106,19 +139,31 @@ function renderAnchors() {
 }
 
 // Вычисление времени для привычки
-function calculateHabitTime(anchorId, wakeUpTime) {
+function calculateHabitTime(anchorId, wakeUpTime, bedtime) {
     const wakeUp = new Date(`2000-01-01T${wakeUpTime}:00`);
+    const bedTime = new Date(`2000-01-01T${bedtime}:00`);
     
     switch(anchorId) {
         case 'morning-light':
-            wakeUp.setMinutes(wakeUp.getMinutes());
+            return wakeUp.toTimeString().substr(0, 5);
+        case 'hydration':
+            wakeUp.setMinutes(wakeUp.getMinutes() + 10);
             return wakeUp.toTimeString().substr(0, 5);
         case 'first-meal':
             wakeUp.setMinutes(wakeUp.getMinutes() + 60);
             return wakeUp.toTimeString().substr(0, 5);
-        case 'last-meal':
-            wakeUp.setHours(18, 0); // Фиксированное время для ужина
+        case 'daylight-exposure':
+            wakeUp.setHours(12, 0);
             return wakeUp.toTimeString().substr(0, 5);
+        case 'movement':
+            wakeUp.setHours(15, 0);
+            return wakeUp.toTimeString().substr(0, 5);
+        case 'last-meal':
+            bedTime.setHours(bedTime.getHours() - 3);
+            return bedTime.toTimeString().substr(0, 5);
+        case 'digital-sunset':
+            bedTime.setHours(bedTime.getHours() - 1);
+            return bedTime.toTimeString().substr(0, 5);
         default:
             return '08:00';
     }
@@ -126,9 +171,20 @@ function calculateHabitTime(anchorId, wakeUpTime) {
 
 // Определение статуса привычки
 function getAnchorStatus(anchorId, habitTime) {
-    // Здесь будет логика определения статуса на основе текущего времени
-    // Пока возвращаем 'pending' для всех
-    return 'pending';
+    const now = new Date();
+    const habitDateTime = new Date(`2000-01-01T${habitTime}:00`);
+    const timeDiff = now.getHours() * 60 + now.getMinutes() - 
+                    (habitDateTime.getHours() * 60 + habitDateTime.getMinutes());
+    
+    const anchor = anchorsConfig.find(a => a.id === anchorId);
+    
+    if (anchor && anchor.completed) {
+        return 'completed';
+    } else if (timeDiff > 120) { // Если прошло более 2 часов после времени привычки
+        return 'missed';
+    } else {
+        return 'pending';
+    }
 }
 
 // Переключение выполнения привычки
@@ -138,6 +194,31 @@ function toggleAnchorCompletion(anchorId) {
         anchor.completed = !anchor.completed;
         saveUserData();
         updateUI();
+        
+        // Показываем мотивационное сообщение
+        showMotivationMessage(anchorId, anchor.completed);
+    }
+}
+
+// Мотивационные сообщения
+function showMotivationMessage(anchorId, completed) {
+    const messages = {
+        'morning-light': completed ? 
+            'Отлично! Солнечный свет запустил ваши циркадные ритмы!' : 
+            'Не забывайте про утренний свет для синхронизации ритмов',
+        'hydration': completed ?
+            'Вода запускает метаболизм и помогает проснуться!' :
+            'Утренняя гидратация важна для детоксикации',
+        'movement': completed ?
+            'Активность улучшила вашу чувствительность к инсулину!' :
+            'Движение помогает синхронизировать периферические часы',
+        'digital-sunset': completed ?
+            'Отлично! Мелатонин сможет выработаться без помех!' :
+            'Синий свет вечером подавляет выработку мелатонина'
+    };
+    
+    if (messages[anchorId]) {
+        alert(messages[anchorId]);
     }
 }
 
@@ -176,6 +257,15 @@ function updateSyncScore() {
     progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
     progressCircle.style.strokeDashoffset = offset;
     
+    // Меняем цвет в зависимости от процента
+    if (score >= 80) {
+        progressCircle.style.stroke = '#48bb78'; // зеленый
+    } else if (score >= 50) {
+        progressCircle.style.stroke = '#ed8936'; // оранжевый
+    } else {
+        progressCircle.style.stroke = '#e53e3e'; // красный
+    }
+    
     saveUserData();
 }
 
@@ -202,6 +292,41 @@ function checkDayStreak() {
     updateUserInfo();
 }
 
+// Настройка уведомлений
+function scheduleNotifications() {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        anchorsConfig.forEach(anchor => {
+            const habitTime = calculateHabitTime(anchor.id, userState.wakeUpTime, userState.bedtime);
+            const [hours, minutes] = habitTime.split(':').map(Number);
+            
+            const now = new Date();
+            const notificationTime = new Date();
+            notificationTime.setHours(hours, minutes, 0);
+            
+            if (notificationTime > now) {
+                const timeout = notificationTime - now;
+                setTimeout(() => {
+                    new Notification('Circadian Tracker', {
+                        body: `Время для: ${anchor.title} - ${anchor.description}`,
+                        icon: '/assets/icons/icon-192x192.png'
+                    });
+                }, timeout);
+            }
+        });
+    }
+}
+
+// Запрос разрешения на уведомления
+function requestNotificationPermission() {
+    if ('Notification' in window) {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                scheduleNotifications();
+            }
+        });
+    }
+}
+
 // Настройка обработчиков событий
 function setupEventListeners() {
     // Модальное окно настроек
@@ -215,6 +340,7 @@ function setupEventListeners() {
         // Заполняем форму текущими значениями
         document.getElementById('name').value = userState.name;
         document.getElementById('wake-up-time').value = userState.wakeUpTime;
+        document.getElementById('bedtime').value = userState.bedtime;
         document.getElementById('chronotype').value = userState.chronotype;
     });
 
@@ -233,14 +359,24 @@ function setupEventListeners() {
         
         userState.name = document.getElementById('name').value;
         userState.wakeUpTime = document.getElementById('wake-up-time').value;
+        userState.bedtime = document.getElementById('bedtime').value;
         userState.chronotype = document.getElementById('chronotype').value;
         
         saveUserData();
         updateUserInfo();
         renderAnchors();
+        scheduleNotifications();
         
         modal.style.display = 'none';
     });
+
+    // Запрос разрешения на уведомления при первом использовании
+    if (!localStorage.getItem('notificationRequested')) {
+        setTimeout(() => {
+            requestNotificationPermission();
+            localStorage.setItem('notificationRequested', 'true');
+        }, 3000);
+    }
 }
 
 // Простая реализация Service Worker для PWA
@@ -251,3 +387,8 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.log('Ошибка регистрации Service Worker:', err));
     });
 }
+
+// Автоматическое обновление статуса привычек каждый час
+setInterval(() => {
+    renderAnchors();
+}, 60 * 60 * 1000);
